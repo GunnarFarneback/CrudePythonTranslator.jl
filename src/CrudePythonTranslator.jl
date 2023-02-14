@@ -177,6 +177,8 @@ function convert_ops!(tokens)
             if tokens[j] ∉ [("OP", "("), ("OP", ",")]
                 tokens[i] = ("OP", "^")
             end
+        elseif token == ("OP", "//")
+            tokens[i] = ("OP", "÷")
         end
     end
 end
