@@ -153,13 +153,13 @@ function convert_keywords!(tokens)
     end
 end
 
-function remove_end_of_line_colons!(tokens)
-    for i in length(tokens):-1:1
-        if tokens[i] == ("OP", ":") && tokens[i + 1] == ("NEWLINE", "\n")
-            deleteat!(tokens, i)
-        end
-    end
-end
+remove_colon_rule1 = Rule([("OP", ":"), ("NEWLINE", "\n")],
+                          [("NEWLINE", "\n")])
+remove_colon_rule2 = Rule([("OP", ":"), ("COMMENT", r".*"), ("NEWLINE", "\n")],
+                          [("COMMENT", 1), ("NEWLINE", "\n")])
+remove_colon_rule3 = Rule([("OP", ":"), ("SPACE", r".*"),
+                           ("COMMENT", r".*"), ("NEWLINE", "\n")],
+                          [("SPACE", 1), ("COMMENT", 2), ("NEWLINE", "\n")])
 
 function convert_ops!(tokens)
     for (i, token) in enumerate(tokens)
@@ -242,7 +242,9 @@ not_rule = Rule([("NAME", "not"), ("SPACE", r".*")],
 
 standard_translations = [Map(normalize_string),
                          InPlace(convert_keywords!),
-                         InPlace(remove_end_of_line_colons!),
+                         remove_colon_rule1,
+                         remove_colon_rule2,
+                         remove_colon_rule3,
                          InPlace(convert_ops!),
                          InPlace(adjust_end_positions!),
                          InPlace(move_docstrings!),
