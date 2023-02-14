@@ -79,6 +79,7 @@ function preprocess_tokens(py, tokenize)
     jl = Tuple{String, String}[]
     for (i, token) in enumerate(py)
         code, text, (start_line, start_col), (end_line, end_col), full = token
+        full_indices = collect(eachindex(full))
         if code == tokenize.NL
         elseif start_line > last_line || code == tokenize.DEDENT && first(py[i - 1]) == tokenize.DEDENT
             if code == tokenize.INDENT
@@ -103,10 +104,10 @@ function preprocess_tokens(py, tokenize)
                 end
             end
             if start_col > length(current_indent)
-                push!(jl, ("SPACE", full[(length(current_indent) + 1):start_col]))
+                push!(jl, ("SPACE", full[full_indices[length(current_indent) + 1]:full_indices[start_col]]))
             end
         elseif start_col > last_col
-            push!(jl, ("SPACE", full[(last_col + 1):start_col]))
+            push!(jl, ("SPACE", full[full_indices[last_col + 1]:full_indices[start_col]]))
         end
         if code ∉ (tokenize.INDENT, tokenize.DEDENT)
             push!(jl, (get(token_codes, code, "UNKNOWN_TOKEN"), text))
