@@ -2,7 +2,7 @@ module CrudePythonTranslator
 
 using Multibreak: @multibreak
 
-export translate, Map, InPlace, Rule
+export translate, Map, InPlace, IteratedInPlace, Rule, guess_token
 
 struct Map
     f::Any
@@ -16,9 +16,21 @@ end
 
 (i::InPlace)(tokens) = (i.f!(tokens); tokens)
 
+struct IteratedInPlace
+    f!::Any
+end
+
+function (i::IteratedInPlace)(tokens)
+    while i.f!(tokens)
+    end
+    return tokens
+end
+
 struct Rule
     from::Vector{Any}
     to::Vector{Any}
+    replace_closing::Union{Nothing, Vector{Any}}
+    Rule(from, to; replace_closing = nothing) = new(from, to, replace_closing)
 end
 
 @multibreak function (rule::Rule)(tokens)
@@ -44,6 +56,20 @@ end
                 end
             end
         end
+
+        if (!isnothing(rule.replace_closing) != 0
+            && first(last(rule.from)) == "OP"
+            && last(last(rule.from)) in ("(", "[", "{"))
+
+            m = find_matching_delimiter(tokens, n)
+            if m > 0
+                deleteat!(tokens, m)
+                for replace_token in reverse(rule.replace_closing)
+                    insert!(tokens, m, replace_match.(replace_token, Ref(matches)))
+                end
+            end
+        end
+
         i += 1
         for j = n:-1:i
             deleteat!(tokens, j)
@@ -69,6 +95,40 @@ ismatch(r, s, _) = (r == s)
 replace_match(i::Integer, matches) = matches[i]
 
 replace_match(s, _) = s
+
+function find_matching_delimiter(tokens, n)
+    _, source = tokens[n]
+    target, direction = Dict("(" => (")", 1),
+                             "[" => ("]", 1),
+                             "{" => ("}", 1),
+                             ")" => ("(", -1),
+                             "]" => ("[", -1),
+                             "}" => ("{", -1))[source]
+
+    count = 0
+    while n in eachindex(tokens)
+        if tokens[n] == ("OP", source)
+            count += 1
+        elseif tokens[n] == ("OP", target)
+            count -= 1
+        end
+        if count == 0
+            return n
+        end
+        n += direction
+    end
+
+    return 0
+end
+
+guess_token(text) = (guess_type(text), text)
+
+function guess_type(text)
+    isdigit(first(text)) && return "NUMBER"
+    isletter(first(text)) && return "NAME"
+    isspace(first(text)) && return "SPACE"
+    return "OP"
+end
 
 function preprocess_tokens(py, tokenize)
     token_codes = tokenize.tok_name
