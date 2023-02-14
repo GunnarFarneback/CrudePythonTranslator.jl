@@ -39,15 +39,8 @@ pkg"add https://github.com/GunnarFarneback/CrudePythonTranslator.jl.git"
 Basic usage is
 
 ```
-using PyCall, CrudePythonTranslator
-translate(filename; pyimport)
-```
-
-or
-
-```
-using PythonCall, CrudePythonTranslator
-translate(filename; pyimport)
+using CrudePythonTranslator
+translate(filename)
 ```
 
 See the `translate` docstring for more options.

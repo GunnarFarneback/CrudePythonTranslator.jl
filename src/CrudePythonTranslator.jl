@@ -1,6 +1,7 @@
 module CrudePythonTranslator
 
 using Multibreak: @multibreak
+using PyCall: pyimport
 
 export translate, Map, InPlace, IteratedInPlace, Rule, guess_token
 
@@ -393,9 +394,6 @@ tokens.
 * `overwrite`: If the output `.jl` file already exists, overwrite it
   instead of writing to `.crude.jl` file. Defaults to `false`.
 
-* `pyimport`: The `pyimport` function from either the `PyCall` or the
-  `PythonCall` package. *This is a mandatory keyword.*
-
 * `include_standard_translations`: If `false`, only do a minimal
   translation. Defaults to true. This can be used if you want to do a
   fully customized translation.
@@ -409,12 +407,8 @@ function translate(source, custom_translations...; kwargs...)
 end
 
 function translate(source, custom_translations::Vector;
-                   recursive = false, overwrite = false, pyimport = nothing,
+                   recursive = false, overwrite = false,
                    include_standard_translations = true, verbose = false)
-    if isnothing(pyimport)
-        error("`pyimport` is a mandatory keyword argument.")
-    end
-
     python_files = String[]
     if isfile(source)
         endswith(source, ".py") || error("File extension must be .py")

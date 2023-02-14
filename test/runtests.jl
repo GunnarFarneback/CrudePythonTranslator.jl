@@ -1,4 +1,4 @@
-using Test, PyCall, CrudePythonTranslator
+using Test, CrudePythonTranslator
 
 @testset "Standard use" begin
     data_dir = joinpath(@__DIR__, "data")
@@ -8,7 +8,7 @@ using Test, PyCall, CrudePythonTranslator
                          by = name -> parse(Int, first(splitext(name))))
         julia_filename = replace(filename, ".py" => ".jl")
         cp(joinpath(data_dir, filename), joinpath(tmp_dir, filename))
-        translate(joinpath(tmp_dir, filename); pyimport)
+        translate(joinpath(tmp_dir, filename))
         expected = read(joinpath(data_dir, julia_filename), String)
         translated = read(joinpath(tmp_dir, julia_filename), String)
         expected == translated || println("Translation failure for $filename")
