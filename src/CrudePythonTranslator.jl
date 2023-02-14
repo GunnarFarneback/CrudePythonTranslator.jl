@@ -1,8 +1,9 @@
 module CrudePythonTranslator
 
 using Multibreak: @multibreak
+using PyCall: pyimport
 
-export translate, Map, InPlace, Rule
+export translate, Map, InPlace, IteratedInPlace, Rule, guess_token
 
 struct Map
     f::Any
@@ -16,9 +17,21 @@ end
 
 (i::InPlace)(tokens) = (i.f!(tokens); tokens)
 
+struct IteratedInPlace
+    f!::Any
+end
+
+function (i::IteratedInPlace)(tokens)
+    while i.f!(tokens)
+    end
+    return tokens
+end
+
 struct Rule
     from::Vector{Any}
     to::Vector{Any}
+    replace_closing::Union{Nothing, Vector{Any}}
+    Rule(from, to; replace_closing = nothing) = new(from, to, replace_closing)
 end
 
 @multibreak function (rule::Rule)(tokens)
@@ -44,6 +57,20 @@ end
                 end
             end
         end
+
+        if (!isnothing(rule.replace_closing) != 0
+            && first(last(rule.from)) == "OP"
+            && last(last(rule.from)) in ("(", "[", "{"))
+
+            m = find_matching_delimiter(tokens, n)
+            if m > 0
+                deleteat!(tokens, m)
+                for replace_token in reverse(rule.replace_closing)
+                    insert!(tokens, m, replace_match.(replace_token, Ref(matches)))
+                end
+            end
+        end
+
         i += 1
         for j = n:-1:i
             deleteat!(tokens, j)
@@ -70,6 +97,40 @@ replace_match(i::Integer, matches) = matches[i]
 
 replace_match(s, _) = s
 
+function find_matching_delimiter(tokens, n)
+    _, source = tokens[n]
+    target, direction = Dict("(" => (")", 1),
+                             "[" => ("]", 1),
+                             "{" => ("}", 1),
+                             ")" => ("(", -1),
+                             "]" => ("[", -1),
+                             "}" => ("{", -1))[source]
+
+    count = 0
+    while n in eachindex(tokens)
+        if tokens[n] == ("OP", source)
+            count += 1
+        elseif tokens[n] == ("OP", target)
+            count -= 1
+        end
+        if count == 0
+            return n
+        end
+        n += direction
+    end
+
+    return 0
+end
+
+guess_token(text) = (guess_type(text), text)
+
+function guess_type(text)
+    isdigit(first(text)) && return "NUMBER"
+    isletter(first(text)) && return "NAME"
+    isspace(first(text)) && return "SPACE"
+    return "OP"
+end
+
 function preprocess_tokens(py, tokenize)
     token_codes = tokenize.tok_name
     indent_stack = String[]
@@ -79,6 +140,7 @@ function preprocess_tokens(py, tokenize)
     jl = Tuple{String, String}[]
     for (i, token) in enumerate(py)
         code, text, (start_line, start_col), (end_line, end_col), full = token
+        full_indices = collect(eachindex(full))
         if code == tokenize.NL
         elseif start_line > last_line || code == tokenize.DEDENT && first(py[i - 1]) == tokenize.DEDENT
             if code == tokenize.INDENT
@@ -103,10 +165,10 @@ function preprocess_tokens(py, tokenize)
                 end
             end
             if start_col > length(current_indent)
-                push!(jl, ("SPACE", full[(length(current_indent) + 1):start_col]))
+                push!(jl, ("SPACE", full[full_indices[length(current_indent) + 1]:full_indices[start_col]]))
             end
         elseif start_col > last_col
-            push!(jl, ("SPACE", full[(last_col + 1):start_col]))
+            push!(jl, ("SPACE", full[full_indices[last_col + 1]:full_indices[start_col]]))
         end
         if code ∉ (tokenize.INDENT, tokenize.DEDENT)
             push!(jl, (get(token_codes, code, "UNKNOWN_TOKEN"), text))
@@ -119,6 +181,11 @@ end
 function normalize_string(token)
     code, text = token
     if code == "STRING"
+        prefix = ""
+        if isletter(first(text))
+            prefix = first(text)
+            text = text[2:end]
+        end
         if startswith(text, "'''")
             text = replace(text, "\"" => "\\\"")
             text = replace(text, "'''" => "\"\"\"")
@@ -126,6 +193,7 @@ function normalize_string(token)
             text = replace(text, "\"" => "\\\"")
             text = replace(text, "'" => "\"")
         end
+        text = prefix * text
     end
     return code, text
 end
@@ -152,13 +220,13 @@ function convert_keywords!(tokens)
     end
 end
 
-function remove_end_of_line_colons!(tokens)
-    for i in length(tokens):-1:1
-        if tokens[i] == ("OP", ":") && tokens[i + 1] == ("NEWLINE", "\n")
-            deleteat!(tokens, i)
-        end
-    end
-end
+remove_colon_rule1 = Rule([("OP", ":"), ("NEWLINE", "\n")],
+                          [("NEWLINE", "\n")])
+remove_colon_rule2 = Rule([("OP", ":"), ("COMMENT", r".*"), ("NEWLINE", "\n")],
+                          [("COMMENT", 1), ("NEWLINE", "\n")])
+remove_colon_rule3 = Rule([("OP", ":"), ("SPACE", r".*"),
+                           ("COMMENT", r".*"), ("NEWLINE", "\n")],
+                          [("SPACE", 1), ("COMMENT", 2), ("NEWLINE", "\n")])
 
 function convert_ops!(tokens)
     for (i, token) in enumerate(tokens)
@@ -170,6 +238,8 @@ function convert_ops!(tokens)
             if tokens[j] ∉ [("OP", "("), ("OP", ",")]
                 tokens[i] = ("OP", "^")
             end
+        elseif token == ("OP", "//")
+            tokens[i] = ("OP", "÷")
         end
     end
 end
@@ -241,7 +311,9 @@ not_rule = Rule([("NAME", "not"), ("SPACE", r".*")],
 
 standard_translations = [Map(normalize_string),
                          InPlace(convert_keywords!),
-                         InPlace(remove_end_of_line_colons!),
+                         remove_colon_rule1,
+                         remove_colon_rule2,
+                         remove_colon_rule3,
                          InPlace(convert_ops!),
                          InPlace(adjust_end_positions!),
                          InPlace(move_docstrings!),
@@ -322,9 +394,6 @@ tokens.
 * `overwrite`: If the output `.jl` file already exists, overwrite it
   instead of writing to `.crude.jl` file. Defaults to `false`.
 
-* `pyimport`: The `pyimport` function from either the `PyCall` or the
-  `PythonCall` package. *This is a mandatory keyword.*
-
 * `include_standard_translations`: If `false`, only do a minimal
   translation. Defaults to true. This can be used if you want to do a
   fully customized translation.
@@ -338,12 +407,8 @@ function translate(source, custom_translations...; kwargs...)
 end
 
 function translate(source, custom_translations::Vector;
-                   recursive = false, overwrite = false, pyimport = nothing,
+                   recursive = false, overwrite = false,
                    include_standard_translations = true, verbose = false)
-    if isnothing(pyimport)
-        error("`pyimport` is a mandatory keyword argument.")
-    end
-
     python_files = String[]
     if isfile(source)
         endswith(source, ".py") || error("File extension must be .py")
