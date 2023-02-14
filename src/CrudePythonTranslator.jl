@@ -120,6 +120,11 @@ end
 function normalize_string(token)
     code, text = token
     if code == "STRING"
+        prefix = ""
+        if isletter(first(text))
+            prefix = first(text)
+            text = text[2:end]
+        end
         if startswith(text, "'''")
             text = replace(text, "\"" => "\\\"")
             text = replace(text, "'''" => "\"\"\"")
@@ -127,6 +132,7 @@ function normalize_string(token)
             text = replace(text, "\"" => "\\\"")
             text = replace(text, "'" => "\"")
         end
+        text = prefix * text
     end
     return code, text
 end
