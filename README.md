@@ -19,11 +19,13 @@ What it does do:
 * It reduces the amount of typing you have to do for a literal port.
   In particular it eliminates the most repetitive parts of the typing.
 
-* It eliminates the error prone step of converting indentation-marked
+* It automates the error prone step of converting indentation-marked
   blocks into `end`-delimited blocks.
 
-* It supports custom translation rules which are appropriate for your
-  code base.
+* It retains comments, docstrings, and formatting.
+
+* It supports adding custom translation rules which are appropriate
+  for your code base.
 
 ## Installation
 
