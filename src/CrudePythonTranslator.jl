@@ -3,7 +3,7 @@ module CrudePythonTranslator
 using Multibreak: @multibreak
 using PyCall: pyimport
 
-export translate, Map, InPlace, IteratedInPlace, Rule, guess_token
+export translate, Map, InPlace, IteratedInPlace, Sequence, Rule, simple_rule
 
 struct Map
     f::Any
@@ -145,12 +145,52 @@ function find_matching_delimiter(tokens, n)
     return 0
 end
 
-guess_token(text) = (guess_type(text), text)
+function simple_rule(from, to;
+                     replace_opening = nothing, replace_closing = nothing)
+    return Rule(crude_tokenize(from), crude_tokenize(to),
+                replace_opening = crude_tokenize(replace_opening),
+                replace_closing = crude_tokenize(replace_closing))
+end
+
+crude_tokenize(::Nothing) = nothing
+crude_tokenize(text::AbstractString) = crude_tokenize(split_tokens(text))
+crude_tokenize(texts::Vector) = auto_token.(texts)
+
+@multibreak function split_tokens(text)
+    number_re = r"^((0x[0-9a-f]+)|(0b[01]+)|(0[0-7]*)|(((?!0)|[-+]|(?=0+\.))(\d*\.)?\d+((e|f)[-+]?\d+)?))((.|\s)*)"
+    name_re = r"^(\w+)((.|\s)*)"
+    space_re = r"^(\s+)((.|\s)*)"
+    # Only need multicharacter operators in here, but should cover
+    # both Python and Julia.
+    op_re = r"^(===|!==|==|!=|%=|&=|\*=|\*\*|\*\*=|\+=|-=|->|=>|\.\.\.|\.=|//|//=|/=|:=|<<|<<=|<=|>>|>>=|>=|@=|\^=|\|=|÷=|\$=|\\=)((.|\s)*)"
+    tokens = []
+    while !isempty(text)
+        if first(text) == '\n'
+            push!(tokens, "\n")
+            text = text[2:end]
+            continue
+        end
+        for re in (space_re, number_re, name_re, op_re)
+            matches = match(re, text)
+            if !isnothing(matches)
+                push!(tokens, first(matches.captures))
+                text = matches.captures[end - 1]
+                break; continue
+            end
+        end
+        push!(tokens, string(first(text)))
+        text = text[nextind(text, 1):end]
+    end
+    return tokens
+end
+
+auto_token(text) = (guess_type(text), text)
 
 function guess_type(text)
     isdigit(first(text)) && return "NUMBER"
     isletter(first(text)) && return "NAME"
     isspace(first(text)) && return "SPACE"
+    first(text) == '\n' && return "NEWLINE"
     return "OP"
 end
 
