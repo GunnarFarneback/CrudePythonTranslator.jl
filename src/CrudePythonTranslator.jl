@@ -36,8 +36,10 @@ end
 struct Rule
     from::Vector{Any}
     to::Vector{Any}
+    replace_opening::Union{Nothing, Vector{Any}}
     replace_closing::Union{Nothing, Vector{Any}}
-    Rule(from, to; replace_closing = nothing) = new(from, to, replace_closing)
+    Rule(from, to; replace_opening = nothing, replace_closing = nothing) =
+        new(from, to, replace_opening, replace_closing)
 end
 
 @multibreak function (rule::Rule)(tokens)
@@ -64,8 +66,9 @@ end
             end
         end
 
+        i += 1
+
         if (!isnothing(rule.replace_closing) != 0
-            && first(last(rule.from)) == "OP"
             && last(last(rule.from)) in ("(", "[", "{"))
 
             m = find_matching_delimiter(tokens, n)
@@ -77,12 +80,26 @@ end
             end
         end
 
-        i += 1
+        matching_opener = 0
+        if (!isnothing(rule.replace_opening) != 0
+            && last(first(rule.from)) in (")", "]", "}"))
+            matching_opener = find_matching_delimiter(tokens, i)
+        end
+
         for j = n:-1:i
             deleteat!(tokens, j)
         end
+
         for to_token in reverse(rule.to)
             insert!(tokens, i, replace_match.(to_token, Ref(matches)))
+        end
+
+        if matching_opener > 0
+            m = matching_opener
+            deleteat!(tokens, m)
+            for replace_token in reverse(rule.replace_opening)
+                insert!(tokens, m, replace_match.(replace_token, Ref(matches)))
+            end
         end
     end
     return tokens
