@@ -27,6 +27,12 @@ function (i::IteratedInPlace)(tokens)
     return tokens
 end
 
+struct Sequence
+    f::Vector{Any}
+end
+
+(s::Sequence)(tokens) = foldl(|>, s.f, init = tokens)
+
 struct Rule
     from::Vector{Any}
     to::Vector{Any}
@@ -227,6 +233,9 @@ remove_colon_rule2 = Rule([("OP", ":"), ("COMMENT", r".*"), ("NEWLINE", "\n")],
 remove_colon_rule3 = Rule([("OP", ":"), ("SPACE", r".*"),
                            ("COMMENT", r".*"), ("NEWLINE", "\n")],
                           [("SPACE", 1), ("COMMENT", 2), ("NEWLINE", "\n")])
+remove_colon = Sequence([remove_colon_rule1,
+                         remove_colon_rule2,
+                         remove_colon_rule3])
 
 function convert_ops!(tokens)
     for (i, token) in enumerate(tokens)
@@ -311,9 +320,7 @@ not_rule = Rule([("NAME", "not"), ("SPACE", r".*")],
 
 standard_translations = [Map(normalize_string),
                          InPlace(convert_keywords!),
-                         remove_colon_rule1,
-                         remove_colon_rule2,
-                         remove_colon_rule3,
+                         remove_colon,
                          InPlace(convert_ops!),
                          InPlace(adjust_end_positions!),
                          InPlace(move_docstrings!),
