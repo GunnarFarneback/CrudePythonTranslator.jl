@@ -45,6 +45,10 @@ translate(filename)
 
 See the `translate` docstring for more options.
 
+## How it works
+
+[Design Walkthrough](docs/design.md)
+
 ## Custom Translation Rules
 
 A custom translation rule is a function which receives a sequence of
