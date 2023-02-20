@@ -21,7 +21,8 @@ function normalize_string(token)
 end
 
 function convert_keywords!(tokens)
-    for (i, (code, text)) in enumerate(tokens)
+    for i in reverse(eachindex(tokens))
+        code, text = tokens[i]
         if code == "NAME" && (i <= 1 || tokens[i - 1] != ("OP", "."))
             for (from, to) in ["True" => "true",
                                "False" => "false",
@@ -34,7 +35,12 @@ function convert_keywords!(tokens)
                     text = to
                     if from in ("or", "and")
                         code = "OP"
+                    elseif to == "@assert"
+                        insert!(tokens, i + 1, ("NAME", "assert"))
+                        code = "OP"
+                        text = "@"
                     end
+                    break
                 end
             end
             tokens[i] = (code, text)
