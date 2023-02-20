@@ -123,6 +123,43 @@ function fix_function_arg_alignment!(tokens)
     end
 end
 
+function dict_and_set!(tokens)
+    i = 1
+    while i < length(tokens)
+        if tokens[i] != ("OP", "{")
+            i += 1
+            continue
+        end
+        colons = Int[]
+        count = 0
+        n = i
+        while n in eachindex(tokens)
+            if tokens[n] == ("OP", "{")
+                count += 1
+            elseif tokens[n] == ("OP", "}")
+                count -= 1
+                count == 0 && break
+            elseif count == 1 && tokens[n] == ("OP", ":")
+                push!(colons, n)
+            end
+            n += 1
+        end
+
+        tokens[n] = ("OP", ")")
+        for j in reverse(colons)
+            tokens[j] = ("OP", "=>")
+            if first(tokens[j - 1]) != "SPACE"
+                insert!(tokens, j, ("SPACE", " "))
+            end
+        end
+        tokens[i] = ("OP", "(")
+        insert!(tokens, i, ("NAME", isempty(colons) ? "Set" : "Dict"))
+        i += 1
+    end
+
+    return tokens
+end
+
 is_none_rule = Rule([("NAME", r".*"), ("SPACE", r".*"), ("NAME", "is"),
                      ("SPACE", r".*"), ("NAME", "None")],
                     [("NAME", "isnothing"), ("OP", "("),
@@ -153,4 +190,5 @@ base_translations = Sequence([Map(normalize_string),
                               is_not_none_rule,
                               not_in_rule,
                               not_rule,
-                              none_rule])
+                              none_rule,
+                              dict_and_set!])
