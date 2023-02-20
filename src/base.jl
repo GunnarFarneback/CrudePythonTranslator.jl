@@ -134,6 +134,8 @@ not_in_rule = Rule([("NAME", "not"), ("SPACE", r".*"), ("NAME", "in")],
 not_rule = Rule([("NAME", "not"), ("SPACE", r".*")],
                 [("OP", "!")])
 
+none_rule = simple_rule("None", "nothing")
+
 base_translations = Sequence([Map(normalize_string),
                               InPlace(convert_keywords!),
                               remove_colon,
@@ -144,4 +146,5 @@ base_translations = Sequence([Map(normalize_string),
                               is_none_rule,
                               is_not_none_rule,
                               not_in_rule,
-                              not_rule])
+                              not_rule,
+                              none_rule])
