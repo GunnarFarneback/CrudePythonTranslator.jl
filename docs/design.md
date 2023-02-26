@@ -17,8 +17,8 @@ into tokens and then manipulate the sequence of tokens to gradually
 make the code look more like Julia and less like Python.
 
 The first step is to call out to Python's `tokenize` standard library,
-which by definition is the authority on tokenizing Python code. This
-gives us a sequence of tuples starting with
+which obviously knows how to tokenize Python code. This gives us a
+sequence of tuples starting with
 ```
 [(1, "def", (1, 0), (1, 3), "def f(a, b):\n"),
  (1, "f", (1, 4), (1, 5), "def f(a, b):\n"),
@@ -27,7 +27,7 @@ gives us a sequence of tuples starting with
 ```
 
 This representation is better viewed by running `tokenize` as a
-script, `python -m tokenize filename`:
+script, `python -m tokenize <filename>`:
 ```
 1,0-1,3:            NAME           'def'
 1,4-1,5:            NAME           'f'
@@ -99,7 +99,7 @@ result starting with
 ```
 
 The best way to view this representation is to run
-`translate(filename, verbose=true, include_base_translations=false)`:
+`translate(filename, verbose=true, include_base_translations = false)`:
 
 ```
 INDENT              ""
@@ -203,7 +203,7 @@ page but for now let us take note of some properties:
   transformations but it does not constitute a syntax tree, so it is
   difficult to do any really deep analysis of the code.
 
-* The "SPACE" tokens sometimes get in the way but the value they
+* The `SPACE` tokens sometimes get in the way but the value they
   provide in allowing a trivial rendering of the code is a worthwhile
   tradeoff.
 

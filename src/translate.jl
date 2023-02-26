@@ -136,6 +136,7 @@ function translate(source, custom_translations::Vector;
     python_files = String[]
     if isfile(source)
         endswith(source, ".py") || error("File extension must be .py")
+        recursive && error("Cannot translate a single file recursively.")
         push!(python_files, source)
     elseif isdir(source)
         if recursive
@@ -155,7 +156,7 @@ function translate(source, custom_translations::Vector;
     end
 
     if isempty(python_files)
-        warn("No python files found in `source` path.")
+        @warn("No python files found in `source` path.")
         return
     end
 

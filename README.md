@@ -45,7 +45,7 @@ translate(filename)
 
 See the `translate` docstring for more options.
 
-## How it works
+## How it Works
 
 [Design Walkthrough](docs/design.md)
 
