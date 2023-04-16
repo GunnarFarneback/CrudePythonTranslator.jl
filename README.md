@@ -61,6 +61,23 @@ a vector of functions.
 
 TODO: Expand this documentation.
 
+## Base Translation Rules
+
+These are used by default. If some of them do not do what you want,
+you can disable the default application and add the ones you like.
+
+* [Base](docs/rules/base.md) (these are used by default).
+
+## Translation Rules Library
+
+These translation rules are available with
+```
+using CrudePython.Library
+```
+but you need to add the ones you want to use to the `translate` call.
+
+* [os.path](docs/rules/os_path.md)
+
 ## Contributing
 
 Did you find some missing translation which would be generally
