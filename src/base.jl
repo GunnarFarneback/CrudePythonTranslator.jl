@@ -160,6 +160,8 @@ function dict_and_set!(tokens)
     return tokens
 end
 
+empty_dict = simple_rule("{}", "Dict()")
+
 is_none_rule = Rule([("NAME", r".*"), ("SPACE", r".*"), ("NAME", "is"),
                      ("SPACE", r".*"), ("NAME", "None")],
                     [("NAME", "isnothing"), ("OP", "("),
@@ -191,4 +193,5 @@ base_translations = Sequence([Map(normalize_string),
                               not_in_rule,
                               not_rule,
                               none_rule,
+                              empty_dict,
                               dict_and_set!])
