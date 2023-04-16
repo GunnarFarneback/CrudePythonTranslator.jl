@@ -1,5 +1,5 @@
 function add_docs(m, filename)
-    for s in split(readchomp(filename), "---\n")
+    for s in split(replace(readchomp(filename), "\r" => ""), "---\n")
         rule_name, doc = split(s, "\n\n", keepempty = false)
         rule_name = strip(rule_name)
         rule = getfield(m, Symbol(rule_name))

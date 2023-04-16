@@ -66,7 +66,7 @@ TODO: Expand this documentation.
 These are used by default. If some of them do not do what you want,
 you can disable the default application and add the ones you like.
 
-* [Base](docs/rules/base.md) (these are used by default).
+* [Base](docs/rules/base.md)
 
 ## Translation Rules Library
 
