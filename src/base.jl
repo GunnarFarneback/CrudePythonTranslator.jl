@@ -1,6 +1,6 @@
 export base_translations
 
-function normalize_string(token)
+function _normalize_string(token)
     code, text = token
     if code == "STRING"
         prefix = ""
@@ -19,6 +19,31 @@ function normalize_string(token)
     end
     return code, text
 end
+
+const normalize_string = Map(_normalize_string)
+
+# If the Python file did not have a final newline and ended with an
+# indented line, there will be a ("NEWLINE", "") token preceding one
+# or more END tokens. Move the "empty newline token" to the end if
+# that's the case.
+function no_final_newline!(tokens)
+    empty_newline_found = false
+    last_newline = 0
+    for (i, token) in enumerate(tokens)
+        if first(token) == "NEWLINE"
+            last_newline = i
+            if last(token) == ""
+                tokens[i] = ("NEWLINE", "\n")
+                empty_newline_found = true
+            end
+        end
+    end
+    if empty_newline_found
+        tokens[last_newline] = ("NEWLINE", "")
+    end
+end
+
+const no_final_newline = InPlace(no_final_newline!)
 
 function convert_keywords!(tokens)
     for i in reverse(eachindex(tokens))
@@ -48,16 +73,20 @@ function convert_keywords!(tokens)
     end
 end
 
-remove_colon_rule1 = Rule([("OP", ":"), ("NEWLINE", "\n")],
-                          [("NEWLINE", "\n")])
-remove_colon_rule2 = Rule([("OP", ":"), ("COMMENT", r".*"), ("NEWLINE", "\n")],
-                          [("COMMENT", 1), ("NEWLINE", "\n")])
-remove_colon_rule3 = Rule([("OP", ":"), ("SPACE", r".*"),
-                           ("COMMENT", r".*"), ("NEWLINE", "\n")],
-                          [("SPACE", 1), ("COMMENT", 2), ("NEWLINE", "\n")])
-remove_colon = Sequence([remove_colon_rule1,
-                         remove_colon_rule2,
-                         remove_colon_rule3])
+const convert_keywords = InPlace(convert_keywords!)
+
+const remove_colon_rule1 = Rule([("OP", ":"), ("NEWLINE", "\n")],
+                                [("NEWLINE", "\n")])
+const remove_colon_rule2 = Rule([("OP", ":"), ("COMMENT", r".*"),
+                                 ("NEWLINE", "\n")],
+                                [("COMMENT", 1), ("NEWLINE", "\n")])
+const remove_colon_rule3 = Rule([("OP", ":"), ("SPACE", r".*"),
+                                 ("COMMENT", r".*"), ("NEWLINE", "\n")],
+                                [("SPACE", 1), ("COMMENT", 2),
+                                 ("NEWLINE", "\n")])
+const remove_colon = Sequence([remove_colon_rule1,
+                               remove_colon_rule2,
+                               remove_colon_rule3])
 
 function convert_ops!(tokens)
     for (i, token) in enumerate(tokens)
@@ -74,6 +103,8 @@ function convert_ops!(tokens)
         end
     end
 end
+
+const convert_ops = InPlace(convert_ops!)
 
 function adjust_end_positions!(tokens)
     something_changed = true
@@ -96,6 +127,8 @@ function adjust_end_positions!(tokens)
     end
 end
 
+const adjust_end_positions = InPlace(adjust_end_positions!)
+
 function move_docstrings!(tokens)
     for i in findall(==(("NAME", "function")), tokens)
         j = i
@@ -111,6 +144,8 @@ function move_docstrings!(tokens)
     end
 end
 
+const move_docstrings = InPlace(move_docstrings!)
+
 function fix_function_arg_alignment!(tokens)
     for i in findall(==(("NAME", "function")), tokens)
         j = i
@@ -122,6 +157,30 @@ function fix_function_arg_alignment!(tokens)
         end
     end
 end
+
+const fix_function_arg_alignment = InPlace(fix_function_arg_alignment!)
+
+const is_none = Rule([("NAME", r".*"), ("SPACE", r".*"), ("NAME", "is"),
+                      ("SPACE", r".*"), ("NAME", "None")],
+                     [("NAME", "isnothing"), ("OP", "("),
+                      ("NAME", 1), ("OP", ")")])
+
+const is_not_none = Rule([("NAME", r".*"), ("SPACE", r".*"),
+                          ("NAME", "is"),  ("SPACE", r".*"),
+                          ("NAME", "not"), ("SPACE", r".*"),
+                          ("NAME", "None")],
+                         [("OP", "!"), ("NAME", "isnothing"),
+                          ("OP", "("), ("NAME", 1), ("OP", ")")])
+
+const not_in = Rule([("NAME", "not"), ("SPACE", r".*"), ("NAME", "in")],
+                    [("OP", "∉")])
+
+const not_rule = Rule([("NAME", "not"), ("SPACE", r".*")],
+                      [("OP", "!")])
+
+const none_rule = simple_rule("None", "nothing")
+
+const empty_dict = simple_rule("{}", "Dict()")
 
 function dict_and_set!(tokens)
     i = 1
@@ -156,39 +215,21 @@ function dict_and_set!(tokens)
         insert!(tokens, i, ("NAME", isempty(colons) ? "Set" : "Dict"))
         i += 1
     end
-
-    return tokens
 end
 
-is_none_rule = Rule([("NAME", r".*"), ("SPACE", r".*"), ("NAME", "is"),
-                     ("SPACE", r".*"), ("NAME", "None")],
-                    [("NAME", "isnothing"), ("OP", "("),
-                     ("NAME", 1), ("OP", ")")])
+const dict_and_set = Sequence([empty_dict, InPlace(dict_and_set!)])
 
-is_not_none_rule = Rule([("NAME", r".*"), ("SPACE", r".*"), ("NAME", "is"),
-                         ("SPACE", r".*"), ("NAME", "not"), ("SPACE", r".*"),
-                         ("NAME", "None")],
-                        [("OP", "!"), ("NAME", "isnothing"), ("OP", "("),
-                         ("NAME", 1), ("OP", ")")])
-
-not_in_rule = Rule([("NAME", "not"), ("SPACE", r".*"), ("NAME", "in")],
-                   [("OP", "∉")])
-
-not_rule = Rule([("NAME", "not"), ("SPACE", r".*")],
-                [("OP", "!")])
-
-none_rule = simple_rule("None", "nothing")
-
-base_translations = Sequence([Map(normalize_string),
-                              InPlace(convert_keywords!),
-                              remove_colon,
-                              InPlace(convert_ops!),
-                              InPlace(adjust_end_positions!),
-                              InPlace(move_docstrings!),
-                              InPlace(fix_function_arg_alignment!),
-                              is_none_rule,
-                              is_not_none_rule,
-                              not_in_rule,
-                              not_rule,
-                              none_rule,
-                              dict_and_set!])
+const base_translations = Sequence([normalize_string,
+                                    no_final_newline,
+                                    convert_keywords,
+                                    remove_colon,
+                                    convert_ops,
+                                    adjust_end_positions,
+                                    move_docstrings,
+                                    fix_function_arg_alignment,
+                                    is_none,
+                                    is_not_none,
+                                    not_in,
+                                    not_rule,
+                                    none_rule,
+                                    dict_and_set])

@@ -1,19 +1,36 @@
 export Map, InPlace, IteratedInPlace, Sequence, Rule, simple_rule
 
-struct Map
+abstract type TranslationRule end
+
+function Base.show(io::IO, rule::TranslationRule)
+    if isempty(rule.doc)
+        text = "Undocumented translation rule of type `$(typeof(rule))`."
+    else
+        text = rule.doc
+    end
+    show(io, MIME"text/plain"(), Markdown.parse(text))
+end
+
+mutable struct Map <: TranslationRule
     f::Any
+    doc::String
+    Map(f) = new(f, "")
 end
 
 (m::Map)(tokens) = (map!(m.f, tokens, tokens); tokens)
 
-struct InPlace
+mutable struct InPlace <: TranslationRule
     f!::Any
+    doc::String
+    InPlace(f!) = new(f!, "")
 end
 
 (i::InPlace)(tokens) = (i.f!(tokens); tokens)
 
-struct IteratedInPlace
+mutable struct IteratedInPlace <: TranslationRule
     f!::Any
+    doc::String
+    IteratedInPlace(f!) = new(f!, "")
 end
 
 function (i::IteratedInPlace)(tokens)
@@ -22,19 +39,22 @@ function (i::IteratedInPlace)(tokens)
     return tokens
 end
 
-struct Sequence
+mutable struct Sequence <: TranslationRule
     f::Vector{Any}
+    doc::String
+    Sequence(f) = new(f, "")
 end
 
 (s::Sequence)(tokens) = foldl(|>, s.f, init = tokens)
 
-struct Rule
+mutable struct Rule <: TranslationRule
     from::Vector{Any}
     to::Vector{Any}
     replace_opening::Union{Nothing, Vector{Any}}
     replace_closing::Union{Nothing, Vector{Any}}
+    doc::String
     Rule(from, to; replace_opening = nothing, replace_closing = nothing) =
-        new(from, to, replace_opening, replace_closing)
+        new(from, to, replace_opening, replace_closing, "")
 end
 
 @multibreak function (rule::Rule)(tokens)
