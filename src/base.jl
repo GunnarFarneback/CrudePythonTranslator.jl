@@ -20,6 +20,27 @@ function normalize_string(token)
     return code, text
 end
 
+# If the Python file did not have a final newline and ended with an
+# indented line, there will be a ("NEWLINE", "") token preceding one
+# or more END tokens. Move the "empty newline token" to the end if
+# that's the case.
+function no_final_newline!(tokens)
+    empty_newline_found = false
+    last_newline = 0
+    for (i, token) in enumerate(tokens)
+        if first(token) == "NEWLINE"
+            last_newline = i
+            if last(token) == ""
+                tokens[i] = ("NEWLINE", "\n")
+                empty_newline_found = true
+            end
+        end
+    end
+    if empty_newline_found
+        tokens[last_newline] = ("NEWLINE", "")
+    end
+end
+
 function convert_keywords!(tokens)
     for i in reverse(eachindex(tokens))
         code, text = tokens[i]
@@ -182,6 +203,7 @@ not_rule = Rule([("NAME", "not"), ("SPACE", r".*")],
 none_rule = simple_rule("None", "nothing")
 
 base_translations = Sequence([Map(normalize_string),
+                              InPlace(no_final_newline!),
                               InPlace(convert_keywords!),
                               remove_colon,
                               InPlace(convert_ops!),
