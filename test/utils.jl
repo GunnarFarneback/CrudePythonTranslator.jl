@@ -14,7 +14,11 @@ function check_translation(python_path, args...; kwargs...)
         expected = read(julia_path, String)
         translated = read(julia_tmp_path, String)
         success = expected == translated
-        success || println("Translation failure for ", python_path)
+        if !success
+            println("Translation failure for ", python_path)
+            println("--- Translation ---\n", translated)
+            println("--- Expected ---\n", expected)
+        end
         return success
     end
 end
