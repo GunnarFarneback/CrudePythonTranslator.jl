@@ -75,18 +75,18 @@ end
 
 const convert_keywords = InPlace(convert_keywords!)
 
-const remove_colon_rule1 = Rule([("OP", ":"), ("NEWLINE", "\n")],
-                                [("NEWLINE", "\n")])
-const remove_colon_rule2 = Rule([("OP", ":"), ("COMMENT", r".*"),
-                                 ("NEWLINE", "\n")],
-                                [("COMMENT", 1), ("NEWLINE", "\n")])
-const remove_colon_rule3 = Rule([("OP", ":"), ("SPACE", r".*"),
-                                 ("COMMENT", r".*"), ("NEWLINE", "\n")],
-                                [("SPACE", 1), ("COMMENT", 2),
-                                 ("NEWLINE", "\n")])
-const remove_colon = Sequence([remove_colon_rule1,
-                               remove_colon_rule2,
-                               remove_colon_rule3])
+const _remove_colon_rule1 = Rule([("OP", ":"), ("NEWLINE", "\n")],
+                                 [("NEWLINE", "\n")])
+const _remove_colon_rule2 = Rule([("OP", ":"), ("COMMENT", r".*"),
+                                  ("NEWLINE", "\n")],
+                                 [("COMMENT", 1), ("NEWLINE", "\n")])
+const _remove_colon_rule3 = Rule([("OP", ":"), ("SPACE", r".*"),
+                                  ("COMMENT", r".*"), ("NEWLINE", "\n")],
+                                 [("SPACE", 1), ("COMMENT", 2),
+                                  ("NEWLINE", "\n")])
+const remove_colon = Sequence([_remove_colon_rule1,
+                               _remove_colon_rule2,
+                               _remove_colon_rule3])
 
 function convert_ops!(tokens)
     for (i, token) in enumerate(tokens)
@@ -180,7 +180,7 @@ const not_rule = Rule([("NAME", "not"), ("SPACE", r".*")],
 
 const none_rule = simple_rule("None", "nothing")
 
-const empty_dict = simple_rule("{}", "Dict()")
+const _empty_dict = simple_rule("{}", "Dict()")
 
 function dict_and_set!(tokens)
     i = 1
@@ -217,7 +217,7 @@ function dict_and_set!(tokens)
     end
 end
 
-const dict_and_set = Sequence([empty_dict, InPlace(dict_and_set!)])
+const dict_and_set = Sequence([_empty_dict, InPlace(dict_and_set!)])
 
 const base_translations = Sequence([normalize_string,
                                     no_final_newline,

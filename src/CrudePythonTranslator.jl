@@ -10,7 +10,8 @@ include("base.jl")
 
 module Library
 using ..CrudePythonTranslator
-foreach(include, readdir(joinpath(@__DIR__, "library"), join = true))
+foreach(include, filter(endswith(".jl"),
+                        readdir(joinpath(@__DIR__, "library"), join = true)))
 include("export_rules.jl")
 end
 

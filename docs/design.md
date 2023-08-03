@@ -189,8 +189,9 @@ From here everything will be a question of transforming the token
 sequence small step by small step, e.g. replacing `def` by `function`
 and removing the colons at the end of lines.
 
-Token transformations will be the subject of a future documentation
-page but for now let us take note of some properties:
+[Token transformations](rules_api.md) are the key to translating the
+code, but for now let us take note of some properties of the token
+representation:
 
 * Comments are their own tokens and nothing inside the comments will
   confuse the translation. (As a corollary, code within a comment will

@@ -1,7 +1,8 @@
 # CrudePythonTranslator
 
-A Julia package which can help porting Python code into Julia. It does
-a syntactical transformation of a Python file at the level of tokens.
+A Julia package which can *help* porting Python code into Julia. It
+does a syntactical transformation of a Python file at the level of
+tokens.
 
 What this package is *not*:
 
@@ -45,6 +46,10 @@ translate(filename)
 
 See the `translate` docstring for more options.
 
+## Tutorial
+
+[Tutorial](docs/tutorial.md)
+
 ## How it Works
 
 [Design Walkthrough](docs/design.md)
@@ -59,14 +64,18 @@ of the standard translations in the source code. Enter your custom
 translations as additional positional arguments of `translate`, or as
 a vector of functions.
 
-TODO: Expand this documentation.
+Simple translations can often be generated with the `simple_rule`
+function, which does not require detailed understanding of the token
+representation.
+
+[Rules API](docs/rules_api.md)
 
 ## Base Translation Rules
 
 These are used by default. If some of them do not do what you want,
 you can disable the default application and add the ones you like.
 
-* [Base](docs/rules/base.md)
+[Base](docs/rules/base.md)
 
 ## Translation Rules Library
 
@@ -76,7 +85,10 @@ using CrudePython.Library
 ```
 but you need to add the ones you want to use to the `translate` call.
 
+* [numpy](docs/rules/numpy.md)
 * [os.path](docs/rules/os_path.md)
+* [pytest](docs/rules/pytest.md)
+* [misc](docs/rules/misc.md)
 
 ## Contributing
 
@@ -84,3 +96,9 @@ Did you find some missing translation which would be generally
 applicable? File an issue or make a PR. Providing a short example of
 an input Python file and a translated Julia file, which could be used
 as testcase, is particularly appreciated.
+
+## What About Large Language Models?
+
+This tool is too crude to make use of large language models (GPT-4
+etc.) If those turn out to be more useful tools, by all means use
+them.
