@@ -57,6 +57,8 @@ function add_CR(token)
     return name, replace(text, "\n" => "\r\n")
 end
 
+# Translate a single file. This is called by `translate` for each file
+# to be translated.
 function translate_file(python_file, julia_file, tokenize, translations,
                         verbose)
     @assert endswith(python_file, ".py")
@@ -73,8 +75,8 @@ function translate_file(python_file, julia_file, tokenize, translations,
         map!(remove_CR, tokens, tokens)
     end
 
-    for translate in translations
-        tokens = translate(tokens)
+    for translation_rule in translations
+        tokens = translation_rule(tokens)
     end
 
     if Sys.iswindows()

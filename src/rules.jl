@@ -1,4 +1,4 @@
-export Map, InPlace, IteratedInPlace, Sequence, Rule, simple_rule
+export Map, InPlace, IteratedInPlace, Sequence, Rule, simple_rule, auto_token
 
 abstract type TranslationRule end
 
@@ -60,6 +60,11 @@ end
 @multibreak function (rule::Rule)(tokens)
     matches = []
     for n = length(tokens):-1:1
+        # Might happen if a replacement near the end has shortened the
+        # list of tokens. Probably should handle resumption after a
+        # replacement in a more disciplined way.
+        n > length(tokens) && continue
+
         i = n
         for from_token in reverse(rule.from)
             i < 1 && break; continue

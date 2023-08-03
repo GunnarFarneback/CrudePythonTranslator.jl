@@ -1,5 +1,8 @@
 using Test, CrudePythonTranslator
+
 include("utils.jl")
-include("base.jl")
 include("translate.jl")
+include("base.jl")
+clear_rules_coverage()
 include("library.jl")
+@testset "Rules coverage and docstrings" check_rules_coverage_and_docstrings()
