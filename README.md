@@ -32,7 +32,7 @@ What it does do:
 
 ```
 using Pkg
-pkg"add https://github.com/GunnarFarneback/CrudePythonTranslator.jl.git"
+pkg"add CrudePythonTranslator"
 ```
 
 ## Usage
